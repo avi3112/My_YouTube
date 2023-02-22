@@ -1,9 +1,54 @@
-import React from "react";
-import { useDispatch } from "react-redux";
+import React, { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { toggleMenu } from "../utils/appSlice";
+import { YOUTUBE_SEARCH_API } from "../utils/constant";
+import { cacheResults } from "../utils/searchSlice";
 
 const Head= ()=>{
+
+    const [searchQuery,setsearchQuery]= useState("")
+    const [suggestions,setsuggestions]= useState([])
+    const [showsuggestion,setshowsuggestion] = useState(false)
+
+    
+
+    const searchCache= useSelector((store)=>store.search)
     const dispatch= useDispatch()
+    
+
+    
+
+    useEffect(()=>{
+        //APi call
+        const timer= setTimeout(()=>{
+            if(searchCache[searchQuery]){
+                setsuggestions(searchCache[searchQuery])
+            }else{
+            getSearchSuggestions()
+            }
+        },200)
+        //make api call after every key press
+        //if the diff between 2 api call is <200ms
+        return ()=>{
+            clearTimeout(timer)
+        }
+        //decline the api call
+    },[searchQuery])
+
+    const getSearchSuggestions = async ()=>{
+        console.log("api call"+searchQuery)
+        const data = await fetch(YOUTUBE_SEARCH_API+searchQuery)
+        const json= await data.json()
+        setsuggestions(json[1])
+
+        //update the cache
+
+        dispatch(cacheResults({
+            [searchQuery]:json[1]
+        }))
+    }
+
+   
 
 
     const toggleMEnuHandler= ()=>{
@@ -26,8 +71,28 @@ const Head= ()=>{
         </div>
 
         <div className="col-span-10 px-10">
-            <input className= "w-1/2 border border-gray-400 p-2 rounded-l-full"type="text"/>
+            <div>
+
+            <input 
+            className= "px-5 w-1/2 border border-gray-400 p-2 rounded-l-full"
+            type="text"
+            value={searchQuery}
+            onChange={(e)=>setsearchQuery(e.target.value)}
+            onFocus={()=>setshowsuggestion(true)}
+            onBlur={()=>setshowsuggestion(false)}
+            
+            
+            />
             <button className="border border-gray-400 px-5 py-2 rounded-r-full bg-gray-100">🔎</button>
+            </div>
+            {showsuggestion && (
+            <div className="fixed bg-white py-2 px-5 w-[30rem] shadow-lg rounded-lg border border-gray-100">
+                <ul>
+                    {suggestions.map((s)=> <li key={s} className="py-2 shadow-sm hover:bg-gray-100">{s}</li>)}
+                    
+                </ul>
+            </div>
+            )}
         </div>
 
         <div>
